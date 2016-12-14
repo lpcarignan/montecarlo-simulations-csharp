@@ -9,7 +9,6 @@ namespace Facilite.MonteCarlo.Core
     public class Percentile
     {
         public double Value { get; }
-        public String PercentileString { get; private set; }
 
         public Percentile(double percentile)
         {
