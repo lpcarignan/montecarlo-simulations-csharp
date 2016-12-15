@@ -19,20 +19,19 @@ namespace Facilite.MonteCarlo.Core
 
         private ThroughputReader throughputReader;
         private SimulationResultsWriter resultsWriter;
-                                              
+
         public int NumberOfSimulations { get; protected set; }
         public int[] HistoricalThroughput { get; private set; }
-        public List<Forecast> Forecasts {get; set;}
+        public List<Forecast> Forecasts { get; set; }
 
         protected Random RandomIndexGenerator { get; set; }
         protected List<SimulationResult> SimulationResults;
 
         protected List<Percentile> Percentiles;
 
-
         protected Simulation(
-            int numberOfSimulations, 
-            ThroughputReader throughputReader, 
+            int numberOfSimulations,
+            ThroughputReader throughputReader,
             SimulationResultsWriter resultsWriter)
         {
             this.throughputReader = throughputReader;
@@ -53,12 +52,14 @@ namespace Facilite.MonteCarlo.Core
 
         public abstract void CreateForecasts();
 
-        protected void AddResultSimulation(int simulatedNumberOfItemsCompleted)
+        protected abstract Func<SimulationResult, int, int, bool> ResultSimulationFilter {get;}
+
+        protected void AddResultSimulation(int numberOfItemsCompleted, int numberOfDays)
         {
-            var list = SimulationResults.Where(r => r.NumberOfItemsCompleted == simulatedNumberOfItemsCompleted);
+            var list = SimulationResults.Where(r => ResultSimulationFilter(r, numberOfItemsCompleted, numberOfDays));
             if (list.Count() == 0)
             {
-                SimulationResults.Add(new SimulationResult(simulatedNumberOfItemsCompleted));
+                SimulationResults.Add(new SimulationResult(numberOfItemsCompleted, numberOfDays));
 
             }
             else if (list.Count() == 1)
@@ -71,10 +72,23 @@ namespace Facilite.MonteCarlo.Core
             }
         }
 
-
         public void PrintSimulationResults()
         {
             resultsWriter.WriteResults(Forecasts, SimulationResults);
+        }
+
+        protected List<int> TransformPercentilesToOccurences(List<Percentile> orderedPercentiles)
+        {
+            List<int> percentileOccurences = new List<int>();
+
+            int index = 0;
+            foreach (Percentile p in orderedPercentiles)
+            {
+                percentileOccurences.Add(Convert.ToInt32(p.Value * (double)NumberOfSimulations));
+                index++;
+            }
+
+            return percentileOccurences;
         }
     }
 }

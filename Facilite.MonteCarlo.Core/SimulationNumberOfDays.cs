@@ -9,6 +9,8 @@ namespace Facilite.MonteCarlo.Core
     {
         private int numberOfDays;
 
+        private Func<SimulationResult, int, int, bool> filterDelegate;
+
         public SimulationNumberOfDays(
             int numberOfDays,
             int numberOfSimulations,
@@ -19,6 +21,15 @@ namespace Facilite.MonteCarlo.Core
                 resultsWriter)
         {
             this.numberOfDays = numberOfDays;
+            this.filterDelegate = delegate (SimulationResult result, int numberOfItemsCompleted, int numberOfDaysToCompleted)
+            {
+                return result.NumberOfItemsCompleted == numberOfItemsCompleted;
+            };
+        }
+
+        protected override Func<SimulationResult, int, int, bool> ResultSimulationFilter
+        {
+            get { return filterDelegate; }
         }
 
         public override void Execute()
@@ -39,34 +50,31 @@ namespace Facilite.MonteCarlo.Core
 
                 simulatedNumberOfItemsCompleted = throughputResults.Sum();
 
-                AddResultSimulation(simulatedNumberOfItemsCompleted);
+                AddResultSimulation(simulatedNumberOfItemsCompleted, this.numberOfDays);
             }
         }
 
         public override void CreateForecasts()
         {
-            var orderedResults = SimulationResults.OrderByDescending(r => r.NumberOfItemsCompleted);
-            var orderedAscPercentiles = Percentiles.OrderBy(p => p.Value);
-
+            var orderedDescResults = SimulationResults.OrderByDescending(r => r.NumberOfItemsCompleted);
+            List<Percentile> percentilesOrdered = Percentiles.OrderBy(p => p.Value).ToList<Percentile>();
+            List<int> percentilesOccurences = TransformPercentilesToOccurences(percentilesOrdered);
             int counter = 0;
-            int numberOfOccurences = 0;
-
-            foreach(Percentile p in orderedAscPercentiles)
+            
+            foreach (SimulationResult result in orderedDescResults)
             {
-                counter = 0;
-                numberOfOccurences = (int)(p.Value * NumberOfSimulations);
-                
-                foreach (SimulationResult result in orderedResults)
+                counter += result.Occurences;
+                if (counter >= percentilesOccurences[0])
                 {
-                    counter += result.Occurences;
-                    if (counter >= numberOfOccurences)
-                    { 
-                        Forecasts.Add(new ForecastItems(result.NumberOfItemsCompleted, p, numberOfDays));
+                    Forecasts.Add(new ForecastItems(result.NumberOfItemsCompleted, percentilesOrdered[0], this.numberOfDays));
+
+                    percentilesOccurences.RemoveAt(0);
+                    percentilesOrdered.RemoveAt(0);
+
+                    if (percentilesOccurences.Count == 0)
                         break;
-                    }
                 }
             }
         }
-
     }
 }
