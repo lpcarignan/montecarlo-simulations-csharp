@@ -67,6 +67,7 @@
     <Compile Include="PercentileTest.cs" />
     <Compile Include="SimulationNumberOfDaysTest.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="SimulationNumberOfItemsTest.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
